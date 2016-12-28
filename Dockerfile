@@ -92,16 +92,45 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # PostgreSQL
 RUN pip install psycopg2
 
-# SQLite
+# SQLite and Spatialite from source
+# https://gist.github.com/tdgunes/04b9962956dd043859f5
+# https://docs.djangoproject.com/en/1.10/ref/contrib/gis/install/spatialite/
 RUN  apt-get update && apt-get install -y --no-install-recommends \
-  sqlite3 \
-  libsqlite3-0 \
-  libsqlite3-dev \
-  python-sqlite \
-  python-pysqlite2 \
-  python-pysqlite2-dbg \
-  && pip install pysqlite \
-  && rm -rf /var/lib/apt/lists/*
+     build-essential \
+     binutils \
+     gdal-bin \
+     libfreexl-dev \
+     libproj-dev \
+     libgeos-dev \
+     libexpat1 \
+     libexpat1-dev \
+     pkg-config \
+     python2.7-dev \
+     && rm -rf /var/lib/apt/lists/*
+
+ENV CFLAGS -I/usr/local/include
+ENV LDFLAGS -L/usr/local/lib
+ENV SQLITE_VERSION 3150200
+ENV SPATIALITE_VERSION 4.3.0a
+ENV SQLITE_YEAR 2016
+
+# Build SQLite
+RUN wget -O sqlite-autoconf.tar.gz http://sqlite.org/${SQLITE_YEAR}/sqlite-autoconf-${SQLITE_VERSION}.tar.gz \
+    && tar -xzvf sqlite-autoconf.tar.gz \
+    && cd sqlite-autoconf-${SQLITE_VERSION} \
+    && CFLAGS="-DSQLITE_ENABLE_RTREE=1" ./configure \
+    && make \
+    && make install \
+    && cd ..
+
+# Build SpatialLite
+RUN wget -O libspatialite.tar.gz http://www.gaia-gis.it/gaia-sins/libspatialite-sources/libspatialite-${SPATIALITE_VERSION}.tar.gz \
+    && tar -xzvf libspatialite.tar.gz \
+    && cd libspatialite-${SPATIALITE_VERSION} \
+    && ./configure \
+    && make \
+    && make install \
+    && cd ..
 
 # Install Django
 RUN pip install -e /root/git_code/django
